@@ -212,9 +212,6 @@ def is_tree(num_vertices, edges):
 				matrix[i, j] = 1
 				matrix[j, i] = 1
 
-	if matrix.T is not matrix:
-		print("you made something weird")
-		return False
 	g = Graph(matrix)
 
 	if len(g.get_connected_vertices(0)) != num_vertices:
@@ -228,6 +225,22 @@ def is_cycle(matrix):
 	zero = np.ones(v) == np.sum(matrix, axis=0)
 	one = np.ones(v) == np.sum(matrix, axis=1)
 	return zero and one
+
+def cycle_loss(matrix, rowcol_coef, frob_coef):
+	v = matrix.shape[0]
+	frob_squared = np.sum(np.square(matrix))
+
+	col_sums = np.sum(matrix, axis=0)
+	row_sums = np.sum(matrix, axis=1)
+	ones = np.ones(v)
+
+	rowcol_loss = rowcol_coef * (np.linalg.norm(col_sums - ones) ** 2 + 
+								  np.linalg.norm(row_sums - ones) ** 2)
+	frob_loss = frob_coef * (v - frob_squared) ** 2
+
+	return rowcol_loss + frob_loss
+
+
 
 def distance(p1, p2):
 	# p1, p2 are 2D tuples. Calculate euclidean distance
@@ -249,6 +262,15 @@ def pc_graph(num_vertices, max_coord):
 				continue
 			edges[i, j] = distance(coords[i], coords[j])
 
+	return edges
+
+def non_pc_graph(num_vertices, max_dist):
+	edges = np.zeros((num_vertices, num_vertices))
+	for i in range(num_vertices):
+		for j in range(i + 1, num_vertices):
+			edge_val = max_dist * np.random.rand()
+			edges[i, j] = edge_val
+			edges[j, i] = edge_val
 	return edges
 
 def eu_shortest_cycle(graph_matrix):
@@ -295,8 +317,9 @@ def eu_shortest_cycle(graph_matrix):
 		tour.append(next)
 		return tour             
 			  
-	freq = freqencies()   
-	return helper([], mst[0][0])
+	freq = freqencies()  
+	cycle = helper([], mst[0][0])
+	return normalized_cycle(cycle)
 
 def ex_shortest_cycle(graph_matrix):
 	num_vertices = graph_matrix.shape[0]
@@ -309,7 +332,8 @@ def ex_shortest_cycle(graph_matrix):
 		cycle_lengths.append(cycle_cost(graph_matrix, verts)) 
 
 	ind = cycle_lengths.index(min(cycle_lengths))
-	return list(perm_list[ind]) + [num_vertices - 1]
+	cycle = list(perm_list[ind]) + [num_vertices - 1]
+	return normalized_cycle(cycle)
 
 def cycle_cost(graph_matrix, cycle):
 	num_vertices = graph_matrix.shape[0]
@@ -319,8 +343,29 @@ def cycle_cost(graph_matrix, cycle):
 		total += graph_matrix[cycle[j], cycle[j + 1]]
 	return total 
 
-a = pc_graph(5, 10)
-b = ex_shortest_cycle(a)
+def normalized_cycle(cycle):
+	# have 0 always be the first vertex of the cycle. 
+	v = len(cycle)
+	ind = cycle.index(0)
+	return [cycle[(i + ind) % v] for i in range(v)]
+
+def cycle_matrix(cycle):
+	v = len(cycle)
+	matrix = np.zeros((v, v))
+	for i in range(v):
+		matrix[i, cycle[i]] = 1
+	return matrix
+
+for i in range(100):
+	a = non_pc_graph(10, 10)
+	b = ex_shortest_cycle(a)
+	c = eu_shortest_cycle(a)
+
+	cost_min = cycle_cost(a, b)
+	cost_approx = cycle_cost(a, c)
+
+	print((cost_approx - cost_min) / cost_min)
+
 
 
 
