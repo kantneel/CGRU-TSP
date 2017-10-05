@@ -2,6 +2,7 @@
 import numpy as np 
 import math
 import heapq
+import itertools
 from pprint import pprint
 
 class Graph(object):
@@ -17,7 +18,6 @@ class Graph(object):
 			self.graph_matrix = graph_matrix
 			self.vertices = graph_matrix.shape[0]
 			self.edge_range = (np.min(graph_matrix), np.max(graph_matrix))
-			self.adjacency_list = [[] for _ in range(self.vertices)]
 
 		self.adjacency_list = [[] for _ in range(self.vertices)]
 		self.edge_dict = {}
@@ -32,14 +32,14 @@ class Graph(object):
 		if vert_rep_len is not None:
 			self.vert_rep_len = vert_rep_len
 		
-		for i in range(vertices):
+		for i in range(self.vertices):
 			vert_bin = list(map(int, [c for c in str(bin(i))[2:]]))
 			full_vert_bin = [0 for _ in range(self.vert_rep_len - len(vert_bin))] + vert_bin
 			self.bin_vert_dict[i] = list(full_vert_bin)
 
 		if graph_matrix is None:
-			for i in range(vertices):
-				for j in range(i + 1, vertices):
+			for i in range(self.vertices):
+				for j in range(i + 1, self.vertices):
 					if np.random.rand() < self.edge_prob:
 						edge_value = int(np.random.randint(edge_range[0], high=edge_range[1] + 1))
 						self.graph_matrix[i, j] = edge_value
@@ -54,8 +54,8 @@ class Graph(object):
 						self.adjacency_list[i].append(j)
 						self.adjacency_list[j].append(i)
 		else:
-			for i in range(vertices):
-				for j in range(vertices):
+			for i in range(self.vertices):
+				for j in range(self.vertices):
 					if self.graph_matrix[i,j] != 0:
 						edge_value = self.graph_matrix[i,j]
 						self.edge_dict[(i, j)] = [edge_value, self.bin_vert_dict[i] + self.bin_vert_dict[j]]
@@ -212,7 +212,7 @@ def is_tree(num_vertices, edges):
 				matrix[i, j] = 1
 				matrix[j, i] = 1
 
-	if matrix.T is matrix:
+	if matrix.T is not matrix:
 		print("you made something weird")
 		return False
 	g = Graph(matrix)
@@ -233,7 +233,8 @@ def distance(p1, p2):
 	# p1, p2 are 2D tuples. Calculate euclidean distance
 	return math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
 
-def planar_connected_graph(num_vertices, max_coord):
+def pc_graph(num_vertices, max_coord):
+	# planar_connected_graph
 	# generate points in 2D space, in first quadrant max_coord x max_coord
 	# get distances between points to generate 2D planar graph. 
 	# returns: edges -> a symmetric matrix of edge lengths
@@ -250,6 +251,76 @@ def planar_connected_graph(num_vertices, max_coord):
 
 	return edges
 
+def eu_shortest_cycle(graph_matrix):
+	# takes a edge matrix as given by planar_connected_graph
+	# checks (n-1)! different paths by setting vertex n to be the last vertex seen before the first one
+	# i.e. n = 5 -> permute(1-4), 5 -> 32415 
+
+	# algorithm credits: http://gregorulm.com/finding-an-eulerian-path/
+
+	graph = Graph(graph_matrix)
+	mst = graph.get_mst()
+
+	def freqencies():
+		my_list = [x for (x, y) in mst]
+		result = [0 for i in range(max(my_list) + 1)]
+		for i in my_list:
+			result[i] += 1
+		return result
+		 
+	def find_node(tour):
+		for i in tour:
+			if freq[i] != 0:
+				return i
+		return -1
+	 
+	def helper(tour, next):
+		find_path(tour, next)
+		u = find_node(tour)
+		while sum(freq) != 0:     
+			sub = find_path([], u)
+			tour = tour[:tour.index(u)] + sub + tour[tour.index(u) + 1:]  
+			u = find_node(tour)
+		return tour
+				  
+	def find_path(tour, next):
+		for (x, y) in mst:
+			if x == next:
+				current = mst.pop(mst.index((x,y)))
+				mst.pop(mst.index((current[1], current[0])))
+				tour.append(current[0])
+				freq[current[0]] -= 1
+				freq[current[1]] -= 1
+				return find_path(tour, current[1])
+		tour.append(next)
+		return tour             
+			  
+	freq = freqencies()   
+	return helper([], mst[0][0])
+
+def ex_shortest_cycle(graph_matrix):
+	num_vertices = graph_matrix.shape[0]
+	perm_list = list(itertools.permutations(np.arange(num_vertices - 1).tolist()))
+
+	cycle_lengths = []
+	for i in range(len(perm_list)):
+		verts = list(perm_list[i])
+		verts.append(num_vertices - 1)
+		cycle_lengths.append(cycle_cost(graph_matrix, verts)) 
+
+	ind = cycle_lengths.index(min(cycle_lengths))
+	return list(perm_list[ind]) + [num_vertices - 1]
+
+def cycle_cost(graph_matrix, cycle):
+	num_vertices = graph_matrix.shape[0]
+	cycle.append(cycle[0])
+	total = 0
+	for j in range(num_vertices):
+		total += graph_matrix[cycle[j], cycle[j + 1]]
+	return total 
+
+a = pc_graph(5, 10)
+b = ex_shortest_cycle(a)
 
 
 
