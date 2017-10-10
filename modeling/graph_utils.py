@@ -4,6 +4,7 @@ import heapq
 import itertools
 from pprint import pprint
 from graph import Graph
+import tensorflow as tf
 
 def is_subgraph(graph, edges):
 	return set(edges) <= set(graph.edge_dict.keys())
@@ -33,19 +34,22 @@ def is_cycle(matrix):
 	one = np.ones(v) == np.sum(matrix, axis=1)
 	return zero and one
 
-def cycle_loss(matrix, rowcol_coef, frob_coef):
-	v = matrix.shape[0]
-	frob_squared = np.sum(np.square(matrix))
+def valid_loss(matrix, rowcol_coef, frob_coef):
+	v = 5
+	frob_squared = tf.reduce_sum(tf.square(matrix))
 
-	col_sums = np.sum(matrix, axis=0)
-	row_sums = np.sum(matrix, axis=1)
-	ones = np.ones(v)
+	col_sums = tf.reduce_sum(matrix, axis=0)
+	row_sums = tf.reduce_sum(matrix, axis=1)
+	ones = tf.ones(v)
 
-	rowcol_loss = rowcol_coef * (np.linalg.norm(col_sums - ones) ** 2 + 
-								  np.linalg.norm(row_sums - ones) ** 2)
-	frob_loss = frob_coef * (v - frob_squared) ** 2
+	rowcol_loss = rowcol_coef * (tf.nn.l2_loss(col_sums - ones) + 
+								  tf.nn.l2_loss(row_sums - ones))
+	frob_loss = frob_coef * tf.square(v - frob_squared)
 
 	return rowcol_loss + frob_loss
+
+def cycle_loss(res, label, cycle_coef):
+	return cycle_coef * tf.nn.l2_loss(res - label)
 
 def distance(p1, p2):
 	# p1, p2 are 2D tuples. Calculate euclidean distance

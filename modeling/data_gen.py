@@ -16,9 +16,11 @@ def gen_and_save_data(num_vertices, max_coord, metric, symmetric, num_shards, sh
 		data_array = np.zeros((shard_size, num_vertices ** 2))
 		label_array = np.zeros((shard_size, num_vertices ** 2))
 		for j in range(shard_size):
-			data_array[j] = gen_func(num_vertices, max_coord)
-			label_array[j] = label_func(g, True, symmetric)
+			g = gen_func(num_vertices, max_coord)
+			data_array[j] = g.reshape(1, num_vertices ** 2)
+			label_array[j] = label_func(g, True, symmetric).reshape(1, num_vertices ** 2)
 		np.savetxt(prefix + "_data_%4d_%4d.csv" % (i, num_shards), data_array, delimiter=',')
 		np.savetxt(prefix + "_labels_%4d_%4d.csv" % (i, num_shards), label_array, delimiter=',')
 
 
+gen_and_save_data(5, 1, True, True, 1, 4096, False, "../graph_data/5v")
