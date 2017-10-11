@@ -50,17 +50,19 @@ train_data = np.loadtxt('../graph_data/5v_data_   1_   1.csv', delimiter=',').re
 train_labels = np.loadtxt('../graph_data/5v_labels_   1_   1.csv', delimiter=',').reshape((4096, 5, 5))
 
 b_size = 4
+g_size = 5
 
-x = tf.placeholder(tf.float32, [b_size, 5, 5])
-y = tf.placeholder(tf.float32, [b_size, 5, 5])
+batch_shape = [b_size, g_size, g_size]
+x = tf.placeholder(tf.float32, batch_shape)
+y = tf.placeholder(tf.float32, batch_shape)
 
-x_image = tf.reshape(x, [b_size, 5, 5, 1])
-start = tf.concat((x_image, tf.zeros((b_size, 5, 5, 4))), axis=3)
+x_image = tf.reshape(x, [b_size, g_size, g_size, 1])
+start = tf.concat((x_image, tf.zeros((b_size, g_size, 5, 9))), axis=3)
 
-img_1 = conv_gru(start, b_size, 3, 5, 5, "cgru1")
-img_2 = conv_gru(img_1, b_size, 3, 5, 5, "cgru2")
-img_3 = conv_gru(img_2, b_size, 3, 5, 5, "cgru3")
-img_4 = conv_gru(img_3, b_size, 3, 5, 5, "cgru4")
+img_1 = conv_gru(start, 4, 4, 10, 10, "cgru1")
+img_2 = conv_gru(img_1, 3, 3, 10, 10, "cgru2")
+img_3 = conv_gru(img_2, 2, 2, 10, 10, "cgru3")
+img_4 = conv_gru(img_3, 1, 1, 10, 10, "cgru4")
 
 result = tf.reshape(img_4[:, :, :, 0], [b_size, 5, 5])
 results = [tf.nn.softmax(tf.reshape(result[i], [5, 5])) for i in range(b_size)]
