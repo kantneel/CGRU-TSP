@@ -46,48 +46,54 @@ def conv_gru(inpts, kw, kh, nin, nout, prefix):
 	'''
 	return gate * inpts + (1 - gate) * cand
 
-train_data = np.loadtxt('../graph_data/5v_data_   1_   1.csv', delimiter=',').reshape((4096, 5, 5))
-train_labels = np.loadtxt('../graph_data/5v_labels_   1_   1.csv', delimiter=',').reshape((4096, 5, 5))
+train_data = np.loadtxt('../graph_data/10v_data_1_1.csv', delimiter=',').reshape((4096, 10, 10))
+train_labels = np.loadtxt('../graph_data/10v_labels_1_1.csv', delimiter=',').reshape((4096, 10, 10))
 
 b_size = 4
-g_size = 5
+g_size = 10
+num_data = 4096
 
 batch_shape = [b_size, g_size, g_size]
 x = tf.placeholder(tf.float32, batch_shape)
 y = tf.placeholder(tf.float32, batch_shape)
 
-x_image = tf.reshape(x, [b_size, g_size, g_size, 1])
-start = tf.concat((x_image, tf.zeros((b_size, g_size, 5, 9))), axis=3)
+x_image = tf.reshape(x, batch_shape + [1])
+start = tf.concat((x_image, tf.random_normal((b_size, g_size, g_size, 19))), axis=3)
 
-img_1 = conv_gru(start, 4, 4, 10, 10, "cgru1")
-img_2 = conv_gru(img_1, 3, 3, 10, 10, "cgru2")
-img_3 = conv_gru(img_2, 2, 2, 10, 10, "cgru3")
-img_4 = conv_gru(img_3, 1, 1, 10, 10, "cgru4")
+img_1 = conv_gru(start, 5, 5, 20, 20, "cgru1")
+img_2 = conv_gru(img_1, 5, 5, 20, 20, "cgru2")
+img_3 = conv_gru(img_2, 5, 5, 20, 20, "cgru3")
+img_4 = conv_gru(img_3, 3, 3, 20, 20, "cgru4")
+img_5 = conv_gru(img_4, 3, 3, 20, 20, "cgru5")
+img_6 = conv_gru(img_5, 2, 2, 20, 20, "cgru6")
 
-result = tf.reshape(img_4[:, :, :, 0], [b_size, 5, 5])
-results = [tf.nn.softmax(tf.reshape(result[i], [5, 5])) for i in range(b_size)]
+
+result = tf.reshape(img_6[:, :, :, 0], batch_shape)
+results = [tf.nn.softmax(tf.reshape(result[i], [g_size, g_size])) for i in range(b_size)]
 t_results = [results[i] + tf.transpose(results[i]) for i in range(b_size)]
-labels = [tf.reshape(y[i], [5,5]) for i in range(b_size)]
+labels = [tf.reshape(y[i], [g_size, g_size]) for i in range(b_size)]
 
-v_loss = np.sum([valid_loss(results[i], 1, 1) for i in range(b_size)])
+v_loss = np.sum([valid_loss(results[i], 0.1, 1) for i in range(b_size)])
 c_loss = np.sum([cycle_loss(t_results[i], labels[i], 1) for i in range(b_size)])
 
 train_step_v = tf.train.AdamOptimizer(1e-3).minimize(v_loss)
-train_step_c = tf.train.AdamOptimizer(1e-5).minimize(c_loss)
+train_step_c = tf.train.AdamOptimizer(1e-3).minimize(c_loss)
 
 
 
 with tf.Session() as sess:
 	sess.run(tf.global_variables_initializer())
 	for i in range(10000):
-		if (b_size * i) % 4096 > (b_size * (i + 1)) % 4096:
+		if (b_size * i) % num_data > (b_size * (i + 1)) % num_data:
 			continue
-		batch_data = train_data[(b_size * i) % 4096 : (b_size * (i + 1)) % 4096]
-		batch_labels = train_labels[(b_size * i) % 4096 : (b_size * (i + 1)) % 4096]
+		batch_data = train_data[(b_size * i) % num_data : (b_size * (i + 1)) % num_data]
+		batch_labels = train_labels[(b_size * i) % num_data : (b_size * (i + 1)) % num_data]
 
-		v, vs = sess.run([v_loss, train_step_v], feed_dict={x : batch_data, y : batch_labels})
+		res, v, vs = sess.run([results, v_loss, train_step_v], feed_dict={x : batch_data, y : batch_labels})
 		c, vc = sess.run([c_loss, train_step_c], feed_dict={x : batch_data, y : batch_labels})
 
 		if i % 20 == 0:
-			print(v, c)
+			print(i, v, c)
+			if i % 200 == 0:
+				print(res)
 

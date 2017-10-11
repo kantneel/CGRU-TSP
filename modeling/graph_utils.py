@@ -35,7 +35,7 @@ def is_cycle(matrix):
 	return zero and one
 
 def valid_loss(matrix, rowcol_coef, frob_coef):
-	v = 5
+	v = 10
 	frob_squared = tf.reduce_sum(tf.square(matrix))
 
 	col_sums = tf.reduce_sum(matrix, axis=0)

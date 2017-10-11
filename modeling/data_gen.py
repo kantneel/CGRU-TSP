@@ -19,8 +19,27 @@ def gen_and_save_data(num_vertices, max_coord, metric, symmetric, num_shards, sh
 			g = gen_func(num_vertices, max_coord)
 			data_array[j] = g.reshape(1, num_vertices ** 2)
 			label_array[j] = label_func(g, True, symmetric).reshape(1, num_vertices ** 2)
-		np.savetxt(prefix + "_data_%4d_%4d.csv" % (i, num_shards), data_array, delimiter=',')
-		np.savetxt(prefix + "_labels_%4d_%4d.csv" % (i, num_shards), label_array, delimiter=',')
+		np.savetxt(prefix + "_data_%s_%s.csv" % (i, num_shards), data_array, delimiter=',')
+		np.savetxt(prefix + "_labels_%s_%s.csv" % (i, num_shards), label_array, delimiter=',')
+
+def gen_sharpening_data(num_vertices, num_shards, shard_size, prefix):
+	for i in range(1, num_shards + 1):
+		data_array = np.zeros((shard_size, num_vertices ** 2))
+		label_array = np.zeros((shard_size, num_vertices ** 2))
+		for j in range(shard_size):
+			num = np.random.randint(1, high=10)
+			start = np.random.uniform(-num, num, (num_vertices, num_vertices))
+			data_array[j] = start.reshape(1, num_vertices ** 2)
+
+			softmaxed = np.exp(start) / np.sum(np.exp(start), axis=1)
+			maxes = np.argmax(softmaxed, axis=1)
+			new_array = np.zeros((num_vertices, num_vertices))
+			for k in range(num_vertices):
+				new_array[k, maxes[k]] = 1
+			label_array[j] = new_array.reshape(1, num_vertices ** 2)
+		np.savetxt(prefix + "_data_%s_%s.csv" % (i, num_shards), data_array, delimiter=',')
+		np.savetxt(prefix + "_labels_%s_%s.csv" % (i, num_shards), label_array, delimiter=',')
 
 
-gen_and_save_data(5, 1, True, True, 1, 4096, False, "../graph_data/5v")
+#gen_and_save_data(10, 1, True, True, 1, 4096, True, "../graph_data/10v")
+gen_sharpening_data(10, 1, 4096, "../sharpening/10v")
