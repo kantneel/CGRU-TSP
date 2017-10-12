@@ -27,7 +27,7 @@ def gen_sharpening_data(num_vertices, num_shards, shard_size, prefix):
 		data_array = np.zeros((shard_size, num_vertices ** 2))
 		label_array = np.zeros((shard_size, num_vertices ** 2))
 		for j in range(shard_size):
-			num = np.random.randint(1, high=10)
+			num = np.random.randint(1, high=4)
 			start = np.random.uniform(-num, num, (num_vertices, num_vertices))
 			data_array[j] = start.reshape(1, num_vertices ** 2)
 
@@ -42,4 +42,4 @@ def gen_sharpening_data(num_vertices, num_shards, shard_size, prefix):
 
 
 #gen_and_save_data(10, 1, True, True, 1, 4096, True, "../graph_data/10v")
-gen_sharpening_data(10, 1, 4096, "../sharpening/10v")
+gen_sharpening_data(10, 1, 40000, "../sharpening/10v")
