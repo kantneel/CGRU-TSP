@@ -17,14 +17,15 @@ def valid_loss(matrix, rowcol_coef, equal_coef, v):
 def cycle_loss(res, label, cycle_coef):
 	return cycle_coef * tf.nn.l2_loss(res - label)
 
-
 def power_and_norm(x, v):
 	x_r = x + tf.zeros([v, v])
 	x_c = tf.transpose(x + tf.zeros([v, v]))
-	for i in range(6):
+	for i in range(0):
 		x_r = tf.pow(x_r, 2)
 		x_r /= tf.reduce_sum(x_r, axis=0)
-	for i in range(6):
+	for i in range(0):
 		x_c = tf.pow(x_c, 2)
 		x_c /= tf.reduce_sum(x_c, axis=0)
-	return 0.5 * x_r + 0.5 * tf.transpose(x_c)
+
+	return x_r
+	#return 0.5 * x_r + 0.5 * tf.transpose(x_c)

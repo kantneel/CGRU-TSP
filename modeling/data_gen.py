@@ -6,19 +6,25 @@ from pprint import pprint
 from graph_utils import *
 from graph import Graph
 
-def gen_and_save_data(num_vertices, max_coord, metric, symmetric, num_shards, shard_size, approx, prefix):
+def gen_and_save_data(num_vertices, border_vertices, max_coord, metric, symmetric, num_shards, shard_size, approx, prefix):
 	# generate num_shards files of graphs, each having shard_size graphs. 
 	# graphs will be uniform in characteristics of num_vertices, max_coord, metric
 	label_func = eu_shortest_cycle if approx else ex_shortest_cycle
 	gen_func = pc_graph if metric else non_pc_graph
 
 	for i in range(1, num_shards + 1):
-		data_array = np.zeros((shard_size, num_vertices ** 2))
-		label_array = np.zeros((shard_size, num_vertices ** 2))
+		data_array = np.zeros((shard_size, border_vertices ** 2))
+		label_array = np.zeros((shard_size, border_vertices ** 2))
 		for j in range(shard_size):
 			g = gen_func(num_vertices, max_coord)
-			data_array[j] = g.reshape(1, num_vertices ** 2)
-			label_array[j] = label_func(g, True, symmetric).reshape(1, num_vertices ** 2)
+			zero_g = -1 * np.ones((border_vertices, border_vertices))
+			zero_g[:num_vertices, :num_vertices] = g 
+			data_array[j] = zero_g.reshape(1, border_vertices ** 2)
+
+			l = label_func(g, True, symmetric)
+			zero_l = (1 + (int(symmetric))) * np.eye(border_vertices)
+			zero_l[:num_vertices, :num_vertices] = l
+			label_array[j] = zero_l.reshape(1, border_vertices ** 2)
 		np.savetxt(prefix + "_data_%s_%s.csv" % (i, num_shards), data_array, delimiter=',')
 		np.savetxt(prefix + "_labels_%s_%s.csv" % (i, num_shards), label_array, delimiter=',')
 
@@ -41,5 +47,5 @@ def gen_sharpening_data(num_vertices, num_shards, shard_size, prefix):
 		np.savetxt(prefix + "_labels_%s_%s.csv" % (i, num_shards), label_array, delimiter=',')
 
 
-#gen_and_save_data(10, 1, True, True, 1, 4096, True, "../graph_data/10v")
-gen_sharpening_data(10, 1, 40000, "../sharpening/10v")
+gen_and_save_data(4, 10, 20, True, True, 1, 4096, False, "../graph_data/4v")
+#gen_sharpening_data(10, 1, 40000, "../sharpening/10v")
