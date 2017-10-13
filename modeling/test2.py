@@ -27,16 +27,29 @@ def conv_gru(inpts, kw, kh, nin, nout, prefix):
 	cand = tf.nn.relu(conv_linear(inpts * reset, kw, kh, nin, nin, [1, 1], True, prefix + "/c", 0.0))
 	return gate * inpts + (1 - gate) * cand
 
-train_data = np.loadtxt('../graph_data/4v_data_1_1.csv', delimiter=',').reshape((4096, 10, 10))
-train_labels = np.loadtxt('../graph_data/4v_labels_1_1.csv', delimiter=',').reshape((4096, 10, 10))
+data_1 = np.loadtxt('../graph_data/4v_data_1_1.csv', delimiter=',').reshape((4096, 10, 10))
+data_2 = np.loadtxt('../graph_data/6v_data_1_1.csv', delimiter=',').reshape((4096, 10, 10))
+
+label_1 = np.loadtxt('../graph_data/4v_labels_1_1.csv', delimiter=',').reshape((4096, 10, 10))
+label_2 = np.loadtxt('../graph_data/6v_labels_1_1.csv', delimiter=',').reshape((4096, 10, 10))
+
+train_data = np.zeros((8192, 10, 10))
+train_labels = np.zeros((8192, 10, 10))
+
+for i in range(4096):
+	train_data[2 * i] = data_1[i]
+	train_data[2 * i + 1] = data_2[i]
+
+	train_labels[2 * i] = label_1[i]
+	train_labels[2 * i + 1] = label_2[i]
 
 b_size = 25
 g_size = 10
-f_num = 2
-num_data = 4096
+f_num = 3
+num_data = 8192
 
-v_rate = 1e-4
-c_rate = 1e-3
+v_rate = 2e-4
+c_rate = 2e-3
 
 def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 
@@ -45,16 +58,20 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 	y = tf.placeholder(tf.float32, batch_shape)
 
 	x_image = tf.reshape(x, batch_shape + [1])
-	start = tf.concat((x_image, tf.random_normal((b_size, g_size, g_size, f_num - 1))), axis=3)
+	start = x_image
+	if f_num != 1:
+		start = tf.concat((x_image, tf.random_normal((b_size, g_size, g_size, f_num - 1))), axis=3)
 
-	img_1 = conv_gru(start, 3, 3, f_num, f_num, "cgru1")
-	img_2 = conv_gru(img_1, 3, 3, f_num, f_num, "cgru2")
+	img_1 = conv_gru(start, 2, 2, f_num, f_num, "cgru1")
+	img_2 = conv_gru(img_1, 5, 5, f_num, f_num, "cgru2")
 	img_3 = conv_gru(img_2, 2, 2, f_num, f_num, "cgru3")
-	img_4 = conv_gru(img_3, 2, 2, f_num, f_num, "cgru4")
+	img_4 = conv_gru(img_3, 5, 5, f_num, f_num, "cgru4")
 	img_5 = conv_gru(img_4, 2, 2, f_num, f_num, "cgru5")
-	img_6 = conv_gru(img_5, 7, 7, f_num, f_num, "cgru6")
+	img_6 = conv_gru(img_5, 5, 5, f_num, f_num, "cgru6")
+	img_7 = conv_gru(img_6, 2, 2, f_num, f_num, "cgru7")
+	img_8 = conv_gru(img_7, 7, 7, f_num, f_num, "cgru8")
 
-	result = tf.reshape(img_6[:, :, :, 0], batch_shape)
+	result = tf.reshape(img_8[:, :, :, 0], batch_shape)
 	results = [power_and_norm(tf.nn.softmax((tf.reshape(result[i], [g_size, g_size]))), g_size) for i in range(b_size)]
 	t_results = [results[i] + tf.transpose(results[i]) for i in range(b_size)]
 	labels = [tf.reshape(y[i], [g_size, g_size]) for i in range(b_size)]
@@ -83,6 +100,8 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 				print(i, avg, c)
 				avg = 0
 				if i % 200 == 0:
+					v_rate = v_rate * 0.93
+					c_rate = c_rate * 0.9
 					print(np.argmax(np.round(res[0]), axis=0))
 					print(np.argmax(res[0], axis=0))
 

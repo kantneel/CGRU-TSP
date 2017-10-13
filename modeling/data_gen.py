@@ -25,6 +25,7 @@ def gen_and_save_data(num_vertices, border_vertices, max_coord, metric, symmetri
 			zero_l = (1 + (int(symmetric))) * np.eye(border_vertices)
 			zero_l[:num_vertices, :num_vertices] = l
 			label_array[j] = zero_l.reshape(1, border_vertices ** 2)
+		print("HELLSDLFKJSDLFIJ")
 		np.savetxt(prefix + "_data_%s_%s.csv" % (i, num_shards), data_array, delimiter=',')
 		np.savetxt(prefix + "_labels_%s_%s.csv" % (i, num_shards), label_array, delimiter=',')
 
@@ -47,5 +48,5 @@ def gen_sharpening_data(num_vertices, num_shards, shard_size, prefix):
 		np.savetxt(prefix + "_labels_%s_%s.csv" % (i, num_shards), label_array, delimiter=',')
 
 
-gen_and_save_data(4, 10, 20, True, True, 1, 4096, False, "../graph_data/4v")
+gen_and_save_data(6, 10, 20, True, True, 1, 4096, False, "../graph_data/6v")
 #gen_sharpening_data(10, 1, 40000, "../sharpening/10v")
