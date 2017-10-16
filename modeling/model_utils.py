@@ -17,15 +17,26 @@ def valid_loss(matrix, rowcol_coef, equal_coef, v):
 def cycle_loss(res, label, cycle_coef):
 	return cycle_coef * tf.nn.l2_loss(res - label)
 
+def zero_one_accuracy(res, label):
+	retval = tf.cond(tf.nn.l2_loss(res - label) < 0.1, lambda: 1, lambda: 0)
+	return retval
+
 def power_and_norm(x, v):
 	x_r = x + tf.zeros([v, v])
-	x_c = tf.transpose(x + tf.zeros([v, v]))
-	for i in range(0):
+	for i in range(6):
 		x_r = tf.pow(x_r, 2)
 		x_r /= tf.reduce_sum(x_r, axis=0)
-	for i in range(0):
-		x_c = tf.pow(x_c, 2)
-		x_c /= tf.reduce_sum(x_c, axis=0)
 
 	return x_r
 	#return 0.5 * x_r + 0.5 * tf.transpose(x_c)
+
+def layer_norm(x, nmaps, prefix, epsilon=1e-5):
+	"""Layer normalize the 4D tensor x, averaging over the last dimension."""
+	with tf.variable_scope(prefix):
+		scale = tf.get_variable("layer_norm_scale", [nmaps],
+														initializer=tf.ones_initializer())
+		bias = tf.get_variable("layer_norm_bias", [nmaps],
+													 initializer=tf.zeros_initializer())
+		mean, variance = tf.nn.moments(x, [3], keep_dims=True)
+		norm_x = (x - mean) / tf.sqrt(variance + epsilon)
+		return norm_x * scale + bias

@@ -48,5 +48,5 @@ def gen_sharpening_data(num_vertices, num_shards, shard_size, prefix):
 		np.savetxt(prefix + "_labels_%s_%s.csv" % (i, num_shards), label_array, delimiter=',')
 
 
-gen_and_save_data(6, 10, 20, True, True, 1, 4096, False, "../graph_data/6v")
+gen_and_save_data(5, 10, 100, True, True, 1, 50008, False, "../graph_data/5v")
 #gen_sharpening_data(10, 1, 40000, "../sharpening/10v")
