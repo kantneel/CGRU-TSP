@@ -17,7 +17,6 @@ def conv_linear(arg, kd, f_num, stride, do_bias, prefix, bias_start, l_norm):
 			bias_term = tf.get_variable("CvB", arg.get_shape().as_list(), initializer=tf.constant_initializer(bias_start))
 
 		res = tf.nn.convolution(arg, k, strides=stride, padding="SAME")
-		#bias_term = tf.reshape(bias_term, [1, 1, 1, f_num])
 		retval = res + bias_term
 		if l_norm:
 			retval = layer_norm(retval, f_num, prefix)
@@ -58,6 +57,8 @@ num_data = 50008
 v_rate = 2e-4
 c_rate = 2e-3
 
+TRAIN_DIR = '/tmp/data'
+
 def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 
 	batch_shape = [b_size, g_size, g_size]
@@ -76,13 +77,6 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 	for i in range(1, len(fs)):
 		cgrus.append(conv_gru(cgrus[i - 1], fs[i], f_num, "cgru%s" % (i)))
 
-	#img_1 = conv_gru(start, fs[0], fs[0], f_num, f_num, "cgru1")
-	#img_2 = conv_gru(img_1, fs[1], fs[1], f_num, f_num, "cgru2")
-	#img_3 = conv_gru(img_2, fs[2], fs[2], f_num, f_num, "cgru3")
-	#img_4 = conv_gru(img_3, fs[3], fs[3], f_num, f_num, "cgru4")
-	#img_5 = conv_gru(img_4, fs[4], fs[4], f_num, f_num, "cgru5")
-	#img_6 = conv_gru(img_5, fs[5], fs[5], f_num, f_num, "cgru6")
-
 	result = tf.reshape(cgrus[-1][:, :, :, 0], batch_shape)
 	results = [tf.nn.softmax(tf.reshape(result[i], [g_size, g_size])) for i in range(b_size)]
 	p_results = [power_and_norm(results[i], g_size) for i in range(b_size)]
@@ -92,19 +86,30 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 	labels = [tf.reshape(y[i], [g_size, g_size]) for i in range(b_size)]
 
 	v_loss = np.sum([valid_loss(results[i], 0.4, 1, g_size) for i in range(b_size)]) / b_size
+	with tf.name_scope("Validity_Loss") as scope:
+		tf.summary.scalar('validity_loss', v_loss)
 	c_loss = np.sum([cycle_loss(t_results[i], labels[i], 1) for i in range(b_size)]) / b_size
+	with tf.name_scope("Cycle_Loss") as scope:
+		tf.summary.scalar('cycle_loss', c_loss)
 	r_acc = np.sum([zero_one_accuracy(pt_results[i], labels[i]) for i in range(b_size)]) / b_size
+	with tf.name_scope("Rounded_Accuracy") as scope:
+		tf.summary.scalar('rounded_accuracy', r_acc)
 
 	train_step_v = tf.train.AdamOptimizer(v_rate).minimize(v_loss)
 	train_step_c = tf.train.AdamOptimizer(c_rate).minimize(c_loss)
+	summ = tf.summary.merge_all()
 
 	with tf.Session() as sess:
+		#with tf.name_scope("global") as scope:
 		sess.run(tf.global_variables_initializer())
 		print("EXPERIMENT VARS: ************************************")
 		print(b_size, g_size, f_num, num_data, v_rate, c_rate)
 		print(fs)
 		print("*****************************************************")
 		avgs = np.zeros(3) # v, c, r
+
+		summary_writer = tf.summary.FileWriter(TRAIN_DIR, sess.graph)
+		summaries = tf.get_collection(tf.GraphKeys.SUMMARIES, scope)
 
 		for i in range(50000):
 			if (b_size * i) % num_data > (b_size * (i + 1)) % num_data:
@@ -113,12 +118,14 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 			batch_labels = train_labels[(b_size * i) % num_data : (b_size * (i + 1)) % num_data]
 
 			res, v, vs = sess.run([results, v_loss, train_step_v], feed_dict={x : batch_data, y : batch_labels})
-			r, c, vc = sess.run([r_acc, c_loss, train_step_c], feed_dict={x : batch_data, y : batch_labels})
-
+			s, r, c, vc = sess.run([summ, r_acc, c_loss, train_step_c], feed_dict={x : batch_data, y : batch_labels})
 			avgs += np.array([v, c, r])
+			if i % 10 == 0:
+				summary_writer.add_summary(s, i)
 			if i % 100 == 0:
 				avgs /= 100
 				print(i, avgs)
+
 				avgs = np.zeros(3)
 				if i % 200 == 0:
 					v_rate = v_rate * 0.93
