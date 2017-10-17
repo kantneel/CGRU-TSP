@@ -46,8 +46,8 @@ for i in range(4096):
 	train_labels[2 * i + 1] = label_2[i]
 '''
 
-train_data = np.loadtxt('../graph_data/5v_data_1_1.csv', delimiter=',').reshape((50008, 10, 10))
-train_labels = np.loadtxt('../graph_data/5v_labels_1_1.csv', delimiter=',').reshape((50008, 10, 10))
+train_data = np.loadtxt('../graph_data/5v_data_.csv', delimiter=',').reshape((50008, 10, 10))
+train_labels = np.loadtxt('../graph_data/5v_labels_.csv', delimiter=',').reshape((50008, 10, 10))
 
 b_size = 30
 g_size = 10
@@ -85,21 +85,23 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 	pt_results = [p_results[i] + tf.transpose(p_results[i]) for i in range(b_size)]
 	labels = [tf.reshape(y[i], [g_size, g_size]) for i in range(b_size)]
 
-	v_loss = np.sum([valid_loss(results[i], 0.4, 1, g_size) for i in range(b_size)]) / b_size
-	with tf.name_scope("Validity_Loss") as scope:
-		tf.summary.scalar('validity_loss', v_loss)
-	c_loss = np.sum([cycle_loss(t_results[i], labels[i], 1) for i in range(b_size)]) / b_size
-	with tf.name_scope("Cycle_Loss") as scope:
-		tf.summary.scalar('cycle_loss', c_loss)
-	r_acc = np.sum([zero_one_accuracy(pt_results[i], labels[i]) for i in range(b_size)]) / b_size
-	with tf.name_scope("Rounded_Accuracy") as scope:
-		tf.summary.scalar('rounded_accuracy', r_acc)
+	with tf.device("/gpu:0"):
+		v_loss = np.sum([valid_loss(results[i], 0.4, 1, g_size) for i in range(b_size)]) / b_size
+		with tf.name_scope("Validity_Loss") as scope:
+			tf.summary.scalar('validity_loss', v_loss)
+		c_loss = np.sum([cycle_loss(t_results[i], labels[i], 1) for i in range(b_size)]) / b_size
+		with tf.name_scope("Cycle_Loss") as scope:
+			tf.summary.scalar('cycle_loss', c_loss)
+		r_acc = np.sum([zero_one_accuracy(pt_results[i], labels[i]) for i in range(b_size)]) / b_size
+		with tf.name_scope("Rounded_Accuracy") as scope:
+			tf.summary.scalar('rounded_accuracy', r_acc)
 
 	train_step_v = tf.train.AdamOptimizer(v_rate).minimize(v_loss)
 	train_step_c = tf.train.AdamOptimizer(c_rate).minimize(c_loss)
 	summ = tf.summary.merge_all()
 
 	with tf.Session() as sess:
+		#with tf
 		#with tf.name_scope("global") as scope:
 		sess.run(tf.global_variables_initializer())
 		print("EXPERIMENT VARS: ************************************")

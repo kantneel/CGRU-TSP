@@ -34,28 +34,11 @@ def is_cycle(matrix):
 	one = np.ones(v) == np.sum(matrix, axis=1)
 	return zero and one
 
-def valid_loss(matrix, rowcol_coef, frob_coef):
-	v = 10
-	frob_squared = tf.reduce_sum(tf.square(matrix))
-
-	col_sums = tf.reduce_sum(matrix, axis=0)
-	row_sums = tf.reduce_sum(matrix, axis=1)
-	ones = tf.ones(v)
-
-	rowcol_loss = rowcol_coef * (tf.nn.l2_loss(col_sums - ones) + 
-								  tf.nn.l2_loss(row_sums - ones))
-	frob_loss = frob_coef * tf.square(v - frob_squared)
-
-	return rowcol_loss + frob_loss
-
-def cycle_loss(res, label, cycle_coef):
-	return cycle_coef * tf.nn.l2_loss(res - label)
-
 def distance(p1, p2):
 	# p1, p2 are 2D tuples. Calculate euclidean distance
 	return math.sqrt((p1[0] - p2[0]) ** 2 + (p1[1] - p2[1]) ** 2)
 
-def pc_graph(num_vertices, max_coord):
+def pc_graph(num_vertices, max_coord, relative):
 	# planar_connected_graph
 	# generate points in 2D space, in first quadrant max_coord x max_coord
 	# get distances between points to generate 2D planar graph. 
@@ -63,6 +46,9 @@ def pc_graph(num_vertices, max_coord):
 	coords = []
 	for i in range(num_vertices):
 		coords.append(max_coord * np.random.rand(2))
+
+	if relative:
+		coords.sort(key=lambda x: distance((0,0), x))
 
 	edges = np.zeros((num_vertices, num_vertices))
 	for i in range(num_vertices):
@@ -73,7 +59,7 @@ def pc_graph(num_vertices, max_coord):
 
 	return edges
 
-def non_pc_graph(num_vertices, max_dist):
+def non_pc_graph(num_vertices, max_dist, relative):
 	edges = np.zeros((num_vertices, num_vertices))
 	for i in range(num_vertices):
 		for j in range(i + 1, num_vertices):
