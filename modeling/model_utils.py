@@ -10,7 +10,7 @@ def valid_loss(matrix, rowcol_coef, equal_coef, v):
 	subd = tf.abs(matrix - 1 / v)
 
 	rowcol_loss = rowcol_coef * (tf.nn.l2_loss(row_sums - ones) + tf.nn.l2_loss(col_sums - ones))
-	equal_loss = - equal_coef * tf.norm(tf.square(tf.square(subd)))
+	equal_loss = - equal_coef * tf.nn.l2_loss(tf.square(tf.square(subd)))
 
 	return rowcol_loss + equal_loss
 
@@ -18,7 +18,9 @@ def cycle_loss(res, label, cycle_coef):
 	return cycle_coef * tf.nn.l2_loss(res - label)
 
 def zero_one_accuracy(res, label):
-	retval = tf.cond(tf.nn.l2_loss(res - label) < 0.1, lambda: 1, lambda: 0)
+	one = lambda : tf.constant(1.0, dtype=tf.float32, name='one')
+	zero = lambda : tf.constant(0.0, dtype=tf.float32, name='zero')
+	retval = tf.select(tf.nn.l2_loss(res-label) < tf.constant(0.1, dtype=tf.float32), tf.constant(1.0), tf.constant(0.0))
 	return retval
 
 def power_and_norm(x, v):
