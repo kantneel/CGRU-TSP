@@ -1,6 +1,6 @@
 import numpy as np 
 import tensorflow as tf 
-
+from tensorflow.python.ops import linalg_ops
 from neural_gpu import *
 from graph_utils import *
 from model_utils import *
@@ -68,7 +68,7 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 	x_image = tf.reshape(x, batch_shape + [1])
 	start = x_image
 	if f_num != 1:
-		start = tf.concat((x_image, tf.random_normal((b_size, g_size, g_size, f_num - 1))), axis=3)
+		start = tf.concat_v2((x_image, tf.random_normal((b_size, g_size, g_size, f_num - 1))), axis=3)
 
 	fs = [2, 7, 2, 7, 2, 7]
 	cgrus = []
@@ -84,7 +84,7 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 	t_results = [results[i] + tf.transpose(results[i]) for i in range(b_size)]
 	pt_results = [p_results[i] + tf.transpose(p_results[i]) for i in range(b_size)]
 	labels = [tf.reshape(y[i], [g_size, g_size]) for i in range(b_size)]
-
+	
 	with tf.device("/gpu:0"):
 		v_loss = np.sum([valid_loss(results[i], 0.4, 1, g_size) for i in range(b_size)]) / b_size
 		with tf.name_scope("Validity_Loss") as scope:
@@ -99,8 +99,10 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 	train_step_v = tf.train.AdamOptimizer(v_rate).minimize(v_loss)
 	train_step_c = tf.train.AdamOptimizer(c_rate).minimize(c_loss)
 	summ = tf.summary.merge_all()
+	
 
-	with tf.Session() as sess:
+	config = tf.ConfigProto(allow_soft_placement=True)
+	with tf.Session(config=config) as sess:
 		#with tf
 		#with tf.name_scope("global") as scope:
 		sess.run(tf.global_variables_initializer())
