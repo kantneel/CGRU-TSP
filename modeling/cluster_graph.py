@@ -23,6 +23,17 @@ def cluster_graph(vertices, max_coord, n_clusters, max_pop, p_rad, p_arc):
 	p_coords = [[c[0], (c[1] + offset) % 360] for c in p_coords]
 	eu_coords = [polar_to_euclid(c) for c in p_coords]
 
+	eu_coords.sort(key=lambda x: distance((0, 0), x))
+
+	edges = np.zeros((num_vertices, num_vertices))
+	for i in range(num_vertices):
+		for j in range(num_vertices):
+			if i == j:
+				continue
+			edges[i, j] = distance(coords[i], coords[j])
+
+	return edges
+
 
 def polar_to_euclid(polar):
 	r = polar[0]

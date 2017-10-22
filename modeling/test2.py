@@ -28,31 +28,13 @@ def conv_gru(inpts, kd, f_num, prefix, layer_norm=False):
 	gate = tf.sigmoid(conv_linear(inpts, kd, f_num, [1, 1], True, prefix + "/g", 0.1, layer_norm))
 	cand = tf.nn.relu(conv_linear(inpts * reset, kd, f_num, [1, 1], True, prefix + "/c", 0.0, layer_norm))
 	return gate * inpts + (1 - gate) * cand
-'''
-data_1 = np.loadtxt('../graph_data/4v_data_1_1.csv', delimiter=',').reshape((4096, 10, 10))
-data_2 = np.loadtxt('../graph_data/6v_data_1_1.csv', delimiter=',').reshape((4096, 10, 10))
 
-label_1 = np.loadtxt('../graph_data/4v_labels_1_1.csv', delimiter=',').reshape((4096, 10, 10))
-label_2 = np.loadtxt('../graph_data/6v_labels_1_1.csv', delimiter=',').reshape((4096, 10, 10))
 
-train_data = np.zeros((8192, 10, 10))
-train_labels = np.zeros((8192, 10, 10))
-
-for i in range(4096):
-	train_data[2 * i] = data_1[i]
-	train_data[2 * i + 1] = data_2[i]
-
-	train_labels[2 * i] = label_1[i]
-	train_labels[2 * i + 1] = label_2[i]
-'''
-
-train_data = np.loadtxt('../graph_data/5v_data_.csv', delimiter=',').reshape((50008, 10, 10))
-train_labels = np.loadtxt('../graph_data/5v_labels_.csv', delimiter=',').reshape((50008, 10, 10))
 
 b_size = 30
 g_size = 10
 f_num = 3
-num_data = 50008
+num_data = 10000
 
 v_rate = 2e-4
 c_rate = 2e-3
@@ -60,6 +42,10 @@ c_rate = 2e-3
 TRAIN_DIR = '/tmp/data'
 
 def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
+
+	train_data = np.loadtxt('../graph_data/8_1_data.csv', delimiter=',').reshape((10000, 10, 10))
+	train_labels = np.loadtxt('../graph_data/8_1_labels.csv', delimiter=',').reshape((10000, 10, 10))
+	curr_count = 1
 
 	batch_shape = [b_size, g_size, g_size]
 	x = tf.placeholder(tf.float32, batch_shape)
@@ -69,6 +55,7 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 	start = x_image
 	if f_num != 1:
 		start = tf.concat_v2((x_image, tf.random_normal((b_size, g_size, g_size, f_num - 1))), axis=3)
+		#start = tf.concat((x_image, tf.random_normal((b_size, g_size, g_size, f_num - 1))), axis=3)
 
 	fs = [2, 7, 2, 7, 2, 7]
 	cgrus = []
@@ -115,8 +102,12 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 		summary_writer = tf.summary.FileWriter(TRAIN_DIR, sess.graph)
 		summaries = tf.get_collection(tf.GraphKeys.SUMMARIES, scope)
 
-		for i in range(50000):
+		for i in range(500000):
 			if (b_size * i) % num_data > (b_size * (i + 1)) % num_data:
+				indices = np.arange(num_data)
+				np.random.shuffle(indices)
+				train_data = train_data[indices]
+				train_labels = train_labels[indices]
 				continue
 			batch_data = train_data[(b_size * i) % num_data : (b_size * (i + 1)) % num_data]
 			batch_labels = train_labels[(b_size * i) % num_data : (b_size * (i + 1)) % num_data]
@@ -128,6 +119,15 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 				summary_writer.add_summary(s, i)
 			if i % 100 == 0:
 				avgs /= 100
+				if avgs[2] > 0.85:
+					print("***************")
+					print("Next Lesson!!!!")
+					print("***************")
+					curr_count += 1
+					train_data = np.loadtxt('../graph_data/8_%s_data.csv' % curr_count, delimiter=',').reshape((num_data, g_size, g_size))
+					train_labels = np.loadtxt('../graph_data/8_%s_labels.csv' % curr_count, delimiter=',').reshape((num_data, g_size, g_size))
+					v_rate = 2e-4
+					c_rate = 2e-3
 				print(i, avgs)
 
 				avgs = np.zeros(3)

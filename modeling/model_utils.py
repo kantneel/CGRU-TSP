@@ -20,7 +20,8 @@ def cycle_loss(res, label, cycle_coef):
 def zero_one_accuracy(res, label):
 	one = lambda : tf.constant(1.0, dtype=tf.float32, name='one')
 	zero = lambda : tf.constant(0.0, dtype=tf.float32, name='zero')
-	retval = tf.select(tf.nn.l2_loss(res-label) < tf.constant(0.1, dtype=tf.float32), tf.constant(1.0), tf.constant(0.0))
+	#retval = tf.select(tf.nn.l2_loss(res-label) < tf.constant(0.1, dtype=tf.float32), tf.constant(1.0), tf.constant(0.0))
+	retval = tf.cond(tf.nn.l2_loss(res-label) < tf.constant(0.1, dtype=tf.float32), one, zero)
 	return retval
 
 def power_and_norm(x, v):
