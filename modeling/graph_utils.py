@@ -59,7 +59,7 @@ def cluster_graph(vertices, max_coord, n_clusters, max_pop, p_rad, p_arc):
 	offset = np.random.uniform(low=0, high=1) * 360 / n_clusters
 	p_coords = [[c[0], (c[1] + offset) % 360] for c in p_coords]
 	eu_coords = [polar_to_euclid(c) for c in p_coords]
-
+	eu_coords = [[e[0] + max_coord / 2, e[1] + max_coord / 2] for e in eu_coords]
 	eu_coords.sort(key=lambda x: distance((0, 0), x))
 
 	edges = np.zeros((vertices, vertices))

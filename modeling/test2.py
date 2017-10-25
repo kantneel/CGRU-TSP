@@ -24,28 +24,28 @@ def conv_linear(arg, kd, f_num, stride, do_bias, prefix, bias_start, l_norm):
 
 def conv_gru(inpts, kd, f_num, prefix, layer_norm=False):
 	"""Convolutional GRU."""
-	reset = tf.tanh(conv_linear(inpts, kd, f_num, [1, 1], True, prefix + "/r", 0.1, layer_norm))
+	reset = tf.nn.tanh(conv_linear(inpts, kd, f_num, [1, 1], True, prefix + "/r", 0.1, layer_norm))
 	gate = tf.sigmoid(conv_linear(inpts, kd, f_num, [1, 1], True, prefix + "/g", 0.1, layer_norm))
 	cand = tf.nn.relu(conv_linear(inpts * reset, kd, f_num, [1, 1], True, prefix + "/c", 0.0, layer_norm))
 	return gate * inpts + (1 - gate) * cand
 
 
 
-b_size = 30
-g_size = 10
+b_size = 8
+g_size = 15
 f_num = 3
 num_data = 10000
 
-v_rate = 2e-4
-c_rate = 2e-3
+v_rate = 6e-4
+c_rate = 10 * v_rate
 
 TRAIN_DIR = '/tmp/data'
 
 def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 
-	train_data = np.loadtxt('../graph_data/8_1_data.csv', delimiter=',').reshape((10000, 10, 10))
-	train_labels = np.loadtxt('../graph_data/8_1_labels.csv', delimiter=',').reshape((10000, 10, 10))
-	curr_count = 1
+	train_data = np.loadtxt('../graph_data/8_0_data.csv', delimiter=',').reshape((num_data, g_size, g_size)) / 100
+	train_labels = np.loadtxt('../graph_data/8_0_labels.csv', delimiter=',').reshape((num_data, g_size, g_size))
+	curr_count = 3
 
 	batch_shape = [b_size, g_size, g_size]
 	x = tf.placeholder(tf.float32, batch_shape)
@@ -57,7 +57,7 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 		start = tf.concat_v2((x_image, tf.random_normal((b_size, g_size, g_size, f_num - 1))), axis=3)
 		#start = tf.concat((x_image, tf.random_normal((b_size, g_size, g_size, f_num - 1))), axis=3)
 
-	fs = [2, 7, 2, 7, 2, 7]
+	fs = [2, 2, 2, 7, 2, 2, 2, 7, 2, 2, 2, 7, 2, 2, 2, 7]
 	cgrus = []
 
 	cgrus.append(conv_gru(start, fs[0], f_num, "cgru0"))
@@ -76,7 +76,7 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 		v_loss = np.sum([valid_loss(results[i], 0.4, 1, g_size) for i in range(b_size)]) / b_size
 		with tf.name_scope("Validity_Loss") as scope:
 			tf.summary.scalar('validity_loss', v_loss)
-		c_loss = np.sum([cycle_loss(t_results[i], labels[i], 1) for i in range(b_size)]) / b_size
+		c_loss = np.sum([cycle_loss2(t_results[i], x_image[i], labels[i], 0.3) for i in range(b_size)]) / b_size
 		with tf.name_scope("Cycle_Loss") as scope:
 			tf.summary.scalar('cycle_loss', c_loss)
 		r_acc = np.sum([zero_one_accuracy(pt_results[i], labels[i]) for i in range(b_size)]) / b_size
@@ -108,6 +108,9 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 				np.random.shuffle(indices)
 				train_data = train_data[indices]
 				train_labels = train_labels[indices]
+				c_rate = max(c_rate * 0.7, 5e-6)
+				v_rate = min(v_rate * 0.75, c_rate * 0.9) 
+				print(v_rate, c_rate)
 				continue
 			batch_data = train_data[(b_size * i) % num_data : (b_size * (i + 1)) % num_data]
 			batch_labels = train_labels[(b_size * i) % num_data : (b_size * (i + 1)) % num_data]
@@ -131,9 +134,6 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 				print(i, avgs)
 
 				avgs = np.zeros(3)
-				if i % 200 == 0:
-					v_rate = v_rate * 0.93
-					c_rate = c_rate * 0.92
 				if i % 1000 == 0:
 					print(np.argmax(np.round(res[0]), axis=0))
 					print(np.argmax(res[0], axis=0))

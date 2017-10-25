@@ -17,6 +17,9 @@ def valid_loss(matrix, rowcol_coef, equal_coef, v):
 def cycle_loss(res, label, cycle_coef):
 	return cycle_coef * tf.nn.l2_loss(res - label)
 
+def cycle_loss2(res, graph, label, cycle_coef):
+	return cycle_coef * tf.nn.l2_loss(graph * (res-label))
+
 def zero_one_accuracy(res, label):
 	one = lambda : tf.constant(1.0, dtype=tf.float32, name='one')
 	zero = lambda : tf.constant(0.0, dtype=tf.float32, name='zero')
