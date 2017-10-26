@@ -76,10 +76,10 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 		v_loss = np.sum([valid_loss(results[i], 0.4, 1, g_size) for i in range(b_size)]) / b_size
 		with tf.name_scope("Validity_Loss") as scope:
 			tf.summary.scalar('validity_loss', v_loss)
-		c_loss = np.sum([cycle_loss2(t_results[i], x_image[i], labels[i], 0.3) for i in range(b_size)]) / b_size
+		c_loss = np.sum([cycle_loss2(t_results[i], x_image[i], labels[i], 8, 0.3) for i in range(b_size)]) / b_size
 		with tf.name_scope("Cycle_Loss") as scope:
 			tf.summary.scalar('cycle_loss', c_loss)
-		r_acc = np.sum([zero_one_accuracy(pt_results[i], labels[i]) for i in range(b_size)]) / b_size
+		r_acc = np.sum([at_least_label_accuracy(pt_results[i], x_image[i], labels[i], 8) for i in range(b_size)]) / b_size
 		with tf.name_scope("Rounded_Accuracy") as scope:
 			tf.summary.scalar('rounded_accuracy', r_acc)
 

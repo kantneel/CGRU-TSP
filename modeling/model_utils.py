@@ -17,15 +17,35 @@ def valid_loss(matrix, rowcol_coef, equal_coef, v):
 def cycle_loss(res, label, cycle_coef):
 	return cycle_coef * tf.nn.l2_loss(res - label)
 
-def cycle_loss2(res, graph, label, cycle_coef):
-	return cycle_coef * tf.nn.l2_loss(graph * (res-label))
+def cycle_loss2(res, graph, label, vertices, cycle_coef):
+	good_coef = tf.cond(cycle_length_diff(res, vertices, graph, label, vertices)[0] > 0,
+	 					lambda: 1, lambda: -1)
+	return good_coef * cycle_coef * tf.nn.l2_loss(graph * (res-label))
 
 def zero_one_accuracy(res, label):
-	one = lambda : tf.constant(1.0, dtype=tf.float32, name='one')
-	zero = lambda : tf.constant(0.0, dtype=tf.float32, name='zero')
 	#retval = tf.select(tf.nn.l2_loss(res-label) < tf.constant(0.1, dtype=tf.float32), tf.constant(1.0), tf.constant(0.0))
-	retval = tf.cond(tf.nn.l2_loss(res-label) < tf.constant(0.1, dtype=tf.float32), one, zero)
+	retval = tf.cond(tf.nn.l2_loss(res-label) < tf.constant(0.1, dtype=tf.float32), lambda: 1, lambda: 0)
 	return retval
+
+def at_least_label_accuracy(res, graph, label, vertices):
+	rets = cycle_length_diff(res, graph, label, vertices)
+
+	return 1 if rets[0] < 0.03 * rets[2] else 0
+
+def cycle_length_diff(res, graph, label, vertices):
+	graph_compare = tf.slice(graph, [0, 0], [vertices, vertices])
+	res_compare = tf.slice(res, [0, 0], [vertices, vertices])
+	label_compare = tf.slice(label, [0, 0], [vertices, vertices])
+
+	res_length = tf.reduce_sum(graph_compare * res_compare)
+	label_length = tf.reduce_sum(graph_compare * label_compare)
+
+	out_of_bounds_fail = vertices - tf.reduce_sum(res_compare)
+	exactness_fail = 1 - tf.reduce_sum(tf.square(res_compare)) / vertices
+	retval = tf.cond(out_of_bounds_fail > 0.5 or exactness_fail > 0.25, 
+					 lambda:tf.square(res_length - label_length), lambda:res_length - label_length)
+
+	return retval, res_length, label_length
 
 def power_and_norm(x, v):
 	x_r = x + tf.zeros([v, v])
