@@ -37,15 +37,15 @@ f_num = 3
 num_data = 10000
 
 v_rate = 6e-4
-c_rate = 10 * v_rate
+c_rate = 5 * v_rate
 
 TRAIN_DIR = '/tmp/data'
 
 def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
+	curr_count = 0
+	train_data = np.loadtxt('../graph_data/15_%s_data.csv' % curr_count, delimiter=',').reshape((num_data, g_size, g_size))
+	train_labels = np.loadtxt('../graph_data/15_%s_labels.csv' % curr_count,  delimiter=',').reshape((num_data, g_size, g_size))
 
-	train_data = np.loadtxt('../graph_data/8_0_data.csv', delimiter=',').reshape((num_data, g_size, g_size)) / 100
-	train_labels = np.loadtxt('../graph_data/8_0_labels.csv', delimiter=',').reshape((num_data, g_size, g_size))
-	curr_count = 3
 
 	batch_shape = [b_size, g_size, g_size]
 	x = tf.placeholder(tf.float32, batch_shape)
@@ -76,10 +76,10 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 		v_loss = np.sum([valid_loss(results[i], 0.4, 1, g_size) for i in range(b_size)]) / b_size
 		with tf.name_scope("Validity_Loss") as scope:
 			tf.summary.scalar('validity_loss', v_loss)
-		c_loss = np.sum([cycle_loss2(t_results[i], x_image[i], labels[i], 8, 0.3) for i in range(b_size)]) / b_size
+		c_loss = np.sum([cycle_loss2(t_results[i], x_image[i], labels[i], 15, 0.3) for i in range(b_size)]) / b_size
 		with tf.name_scope("Cycle_Loss") as scope:
 			tf.summary.scalar('cycle_loss', c_loss)
-		r_acc = np.sum([at_least_label_accuracy(pt_results[i], x_image[i], labels[i], 8) for i in range(b_size)]) / b_size
+		r_acc = np.sum([at_least_label_accuracy(pt_results[i], x_image[i], labels[i], 15) for i in range(b_size)]) / b_size
 		with tf.name_scope("Rounded_Accuracy") as scope:
 			tf.summary.scalar('rounded_accuracy', r_acc)
 
@@ -127,16 +127,13 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 					print("Next Lesson!!!!")
 					print("***************")
 					curr_count += 1
-					train_data = np.loadtxt('../graph_data/8_%s_data.csv' % curr_count, delimiter=',').reshape((num_data, g_size, g_size))
-					train_labels = np.loadtxt('../graph_data/8_%s_labels.csv' % curr_count, delimiter=',').reshape((num_data, g_size, g_size))
-					v_rate = 2e-4
-					c_rate = 2e-3
+					train_data = np.loadtxt('../graph_data/15_%s_data.csv' % curr_count, delimiter=',').reshape((num_data, g_size, g_size))
+					train_labels = np.loadtxt('../graph_data/15_%s_labels.csv' % curr_count, delimiter=',').reshape((num_data, g_size, g_size))
 				print(i, avgs)
 
 				avgs = np.zeros(3)
-				if i % 1000 == 0:
-					print(np.argmax(np.round(res[0]), axis=0))
-					print(np.argmax(res[0], axis=0))
+				print(np.argmax(np.round(res[0]), axis=0))
+				print(np.argmax(res[0], axis=0))
 
 train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate)
 

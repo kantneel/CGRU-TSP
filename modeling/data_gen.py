@@ -17,7 +17,7 @@ def gen_and_save_data(num_vertices, border_vertices, max_coord, shard_size, metr
 	for j in range(shard_size):
 		if j % 100 == 0:
 			print(j)
-		g = gen_func(num_vertices, max_coord, relative)
+		g = gen_func(num_vertices, max_coord, relative) + 10 * max_coord * np.eye(num_vertices)
 		zero_g = -1 * np.ones((border_vertices, border_vertices))
 		zero_g[:num_vertices, :num_vertices] = g 
 		data_array[j] = zero_g.reshape(1, border_vertices ** 2)
@@ -38,7 +38,7 @@ def gen_curriculum(num_vertices, border_vertices, max_coord, shard_size, approx,
 	data_array = np.zeros((shard_size, border_vertices ** 2))
 	label_array = np.zeros((shard_size, border_vertices ** 2))
 	for j in range(shard_size):
-		g = cluster_graph(num_vertices, max_coord, n_clusters, max_pop, p_rad, p_arc)
+		g = cluster_graph(num_vertices, max_coord, n_clusters, max_pop, p_rad, p_arc) + 10 * max_coord * np.eye(num_vertices)
 		zero_g = -max_coord / 15 * np.ones((border_vertices, border_vertices))
 		zero_g[:num_vertices, :num_vertices] = g 
 		data_array[j] = zero_g.reshape(1, border_vertices ** 2)
@@ -74,12 +74,12 @@ def gen_sharpening_data(num_vertices, num_shards, shard_size, prefix):
 #gen_and_save_data(5, 10, 100, 50008, True, True, True, False, "../graph_data/5v")
 #gen_sharpening_data(10, 1, 40000, "../sharpening/10v")
 
-gen_curriculum(8, 15, 100, 10000, True, 3, 3, 0.99, 0.4, "../graph_data/8_0")
-gen_curriculum(8, 15, 100, 10000, True, 3, 3, 0.95, 0.5, "../graph_data/8_1")
-gen_curriculum(8, 15, 100, 10000, True, 3, 3, 0.8, 0.2, "../graph_data/8_2")
-gen_curriculum(8, 15, 100, 10000, True, 3, 3, 0.5, 0.2, "../graph_data/8_3")
-gen_curriculum(8, 15, 100, 10000, True, 3, 3, 0.6, 0.4, "../graph_data/8_4")
-gen_curriculum(8, 15, 100, 10000, True, 3, 3, 0.3, 0.6, "../graph_data/8_5")
-#gen_and_save_data(8, 15, 100, 10000, True, True, True, False, "../graph_data/8_5")
+gen_curriculum(15, 15, 1, 10000, True, 5, 5, 0.99, 0.4, "../graph_data/15_0")
+gen_curriculum(15, 15, 1, 10000, True, 5, 5, 0.95, 0.5, "../graph_data/15_1")
+gen_curriculum(15, 15, 1, 10000, True, 5, 5, 0.8, 0.2, "../graph_data/15_2")
+gen_curriculum(15, 15, 1, 10000, True, 5, 5, 0.5, 0.2, "../graph_data/15_3")
+gen_curriculum(15, 15, 1, 10000, True, 5, 5, 0.6, 0.4, "../graph_data/15_4")
+gen_curriculum(15, 15, 1, 10000, True, 5, 5, 0.3, 0.6, "../graph_data/15_5")
+gen_and_save_data(15, 15, 1, 10000, True, True, True, True, "../graph_data/15_6")
 
 
