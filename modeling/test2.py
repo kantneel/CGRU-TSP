@@ -54,8 +54,8 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 	x_image = tf.reshape(x, batch_shape + [1])
 	start = x_image
 	if f_num != 1:
-		start = tf.concat_v2((x_image, tf.random_normal((b_size, g_size, g_size, f_num - 1))), axis=3)
-		#start = tf.concat((x_image, tf.random_normal((b_size, g_size, g_size, f_num - 1))), axis=3)
+		#start = tf.concat_v2((x_image, tf.random_normal((b_size, g_size, g_size, f_num - 1))), axis=3)
+		start = tf.concat((x_image, tf.random_normal((b_size, g_size, g_size, f_num - 1))), axis=3)
 
 	fs = [2, 2, 2, 7, 2, 2, 2, 7, 2, 2, 2, 7, 2, 2, 2, 7]
 	cgrus = []
@@ -72,7 +72,7 @@ def train_loop(b_size, g_size, f_num, num_data, v_rate, c_rate):
 	pt_results = [p_results[i] + tf.transpose(p_results[i]) for i in range(b_size)]
 	labels = [tf.reshape(y[i], [g_size, g_size]) for i in range(b_size)]
 	
-	with tf.device("/gpu:0"):
+	with tf.device("/cpu:0"):
 		v_loss = np.sum([valid_loss(results[i], 0.4, 1, g_size) for i in range(b_size)]) / b_size
 		with tf.name_scope("Validity_Loss") as scope:
 			tf.summary.scalar('validity_loss', v_loss)
